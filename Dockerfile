@@ -1,6 +1,6 @@
 FROM nvcr.io/nvidia/pytorch:22.12-py3
 
-WORKDIR /opt/apps/DoctorGPT
+WORKDIR /opt/apps/llama
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
