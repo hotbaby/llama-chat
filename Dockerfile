@@ -7,4 +7,4 @@ RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 COPY . .
 
-CMD streamlit run --server.address 0.0.0.0 --server.port 8000 --server.enableCORS=false --server.enableXsrfProtection=false web.py
+CMD streamlit run --server.address 0.0.0.0 --server.port 8501 --server.enableCORS=false --server.enableXsrfProtection=false web.py
