@@ -12,7 +12,7 @@ from typing import List, Dict, Tuple, Optional
 
 from generation import chat
 
-model_name = "Llama"
+model_name =  os.environ.get("MODEL_NAME", "Llama")
 model_path = os.environ.get("MODEL_PATH", "/data/models/llama/llama-2-7b-chat-hf")
 
 user_avatar = "🧑‍💻"
