@@ -46,7 +46,7 @@ docker run -d --rm --name llama-chat -v /data:/data -p 8501:8501 llama-chat
 
 ### Llama SFT系列模型运行
 
-基于llama-cha镜像运行[DoctorGPT](https://github.com/llSourcell/DoctorGPT)。
+基于llama-chat镜像运行[DoctorGPT](https://github.com/llSourcell/DoctorGPT)。
 
 ```bash
 # 下载DoctorGPT模型参数 https://huggingface.co/llSourcell/medllama2_7b
