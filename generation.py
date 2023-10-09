@@ -2,7 +2,7 @@
 
 from queue import Queue
 from threading import Thread
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict
 
 import torch
 from transformers import LlamaTokenizer
@@ -13,9 +13,9 @@ from transformers import GenerationConfig
 def build_chat_input(
     model: LlamaForCausalLM,
     tokenizer: LlamaTokenizer,
-    messages: List[dict],
-    max_new_tokens: int=0,
-    model_max_length: int=4096,
+    messages: List[Dict],
+    max_new_tokens: int = 0,
+    model_max_length: int = 4096,
 ):
     def _parse_messages(messages, split_role="user"):
         system, rounds = "", []
@@ -36,25 +36,32 @@ def build_chat_input(
 
         return system, rounds
 
-    max_input_tokens = model_max_length - max_new_tokens
     system, rounds = _parse_messages(messages, split_role="user")
-    system_tokens = tokenizer.encode(system)
-    max_history_tokens = max_input_tokens - len(system_tokens)
+    # system tokens
+    system_tokens = tokenizer.encode(system, add_special_tokens=True)
+
+    # query tokens
+    assert rounds[-1][0]["role"] == "user"
+    query = "[Round {}]\n\n问：{}\n\n答：".format(len(rounds), rounds[-1][0]["content"])
+    query_tokens = tokenizer.encode(query, add_special_tokens=False)
+
+    # history tokens
+    residue_tokens_length = model_max_length - max_new_tokens - len(query_tokens) - len(system_tokens)
+    history = []
+    for i, round in enumerate(rounds[:-1]):
+        assert round[0]["role"] == "user"
+        assert round[1]["role"] == "assistant"
+        history.append("[Round {}]\n\n问：{}\n\n答：{}\n\n".format(i+1, round[0]["content"], round[1]["content"]))
 
     history_tokens = []
-    for round in rounds[::-1]:
-        round_tokens = []
-        for message in round:
-            round_tokens.extend(tokenizer.encode(message["content"]))
+    for round in history:
+        round_tokens = tokenizer.encode(round, add_special_tokens=False)
+        if residue_tokens_length < len(round_tokens):
+            break
+        residue_tokens_length -= len(round_tokens)
+        history_tokens += round_tokens
 
-        if len(history_tokens) == 0 or len(history_tokens) + len(round_tokens) <= max_history_tokens:
-            history_tokens = round_tokens + history_tokens  # concat left
-            if len(history_tokens) < max_history_tokens:
-                continue
-        break
-
-    input_tokens = system_tokens + history_tokens
-    input_tokens = input_tokens[-max_input_tokens:]  # truncate left
+    input_tokens = system_tokens + history_tokens + query_tokens
     return torch.LongTensor([input_tokens]).to(model.device)
 
 
@@ -95,8 +102,9 @@ def chat(model: LlamaForCausalLM,
          tokenizer: LlamaTokenizer,
          messages: List[dict],
          stream=True,
-         generation_config: GenerationConfig=None):
+         generation_config: GenerationConfig = None):
     input_ids = build_chat_input(model, tokenizer, messages, generation_config.max_new_tokens)
+    print(f"input: {tokenizer.decode(input_ids.tolist()[0], skip_special_tokens=True)}")
     if stream:
         streamer = TextIterStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
         Thread(target=model.generate, kwargs=dict(
